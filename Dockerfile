@@ -10,9 +10,10 @@ COPY shared/ shared/
 COPY app/ app/
 RUN npm run build -w @routinecast/shared && npm run build -w @routinecast/app
 
-# ffmpeg 7.x pinned by digest of the bookworm package train — record the
-# version at build time; it is deliberately NOT part of the asset cache key.
-FROM node:20-bookworm-slim
+# ffmpeg 7.1 from Debian trixie (7:7.1.5-0+deb13u1). Bookworm only ships
+# 5.1; the leading "7:" is Debian's epoch, not the upstream major version.
+# Record the version at build time; it is deliberately NOT part of the asset cache key.
+FROM node:20-trixie-slim
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ffmpeg=7:7.1.* \
   && rm -rf /var/lib/apt/lists/*
