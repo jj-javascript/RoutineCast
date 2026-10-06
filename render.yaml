@@ -6,7 +6,7 @@ services:
     name: routinecast
     runtime: docker
     plan: free
-    healthCheckPath: /api/state   # 401 unauthenticated still proves the process is up
+    healthCheckPath: /health       # unauthenticated liveness; /api/* requires the bearer token
     envVars:
       - key: API_TOKEN
         generateValue: true        # copy this into the agent plist + CMS login

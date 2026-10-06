@@ -1,6 +1,7 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { bearerAuth } from "hono/bearer-auth";
+import { HTTPException } from "hono/http-exception";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -44,6 +45,14 @@ const presignClient = new S3Client({
 });
 
 const app = new Hono();
+// Liveness only. Render's health check sends no Authorization header, and a
+// 401 on /api/state fails the check and gets logged as a crash.
+app.get("/health", (c) => {
+  // #region agent log
+  fetch("http://127.0.0.1:7568/ingest/9b2bc7eb-39c7-459e-af89-4fd4b6e0441a", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "c8b93c" }, body: JSON.stringify({ sessionId: "c8b93c", location: "app/src/server/index.ts:health", message: "health", data: { status: 200 }, timestamp: Date.now(), hypothesisId: "H2", runId: "post-fix" }) }).catch(() => {});
+  // #endregion
+  return c.json({ ok: true });
+});
 app.use("/api/*", bearerAuth({ token: config.apiToken }));
 
 // ---------------------------------------------------------------- CMS API
@@ -376,10 +385,20 @@ class HttpError extends Error {
 }
 
 app.onError((err, c) => {
+  if (err instanceof HTTPException) {
+    // #region agent log
+    fetch("http://127.0.0.1:7568/ingest/9b2bc7eb-39c7-459e-af89-4fd4b6e0441a", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "c8b93c" }, body: JSON.stringify({ sessionId: "c8b93c", location: "app/src/server/index.ts:onError", message: "http-exception", data: { status: err.status, branch: "http-exception" }, timestamp: Date.now(), hypothesisId: "H1", runId: "post-fix" }) }).catch(() => {});
+    // #endregion
+    if (err.status >= 500) console.error(err);
+    return err.getResponse();
+  }
   if (err instanceof HttpError) return c.json({ error: err.message }, err.status);
   if (err instanceof z.ZodError) {
     return c.json({ error: "validation failed", issues: err.issues }, 400);
   }
+  // #region agent log
+  fetch("http://127.0.0.1:7568/ingest/9b2bc7eb-39c7-459e-af89-4fd4b6e0441a", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "c8b93c" }, body: JSON.stringify({ sessionId: "c8b93c", location: "app/src/server/index.ts:onError", message: "internal", data: { name: err.name, branch: "internal" }, timestamp: Date.now(), hypothesisId: "H1", runId: "post-fix" }) }).catch(() => {});
+  // #endregion
   console.error(err);
   return c.json({ error: "internal error" }, 500);
 });
