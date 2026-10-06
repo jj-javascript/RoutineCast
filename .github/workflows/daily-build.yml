@@ -1,0 +1,54 @@
+name: daily-build
+
+# Daily build trigger (D4/D5/D18):
+#  - The request HOLDS THE CONNECTION OPEN until the mp3 + RSS are written —
+#    that open request is what keeps the Render free instance alive mid-stitch.
+#  - timeout-minutes: 15 right-sizes the hold (stitch concats cached assets;
+#    Render allows responses up to 100 min, so this is safe).
+#  - Retries: 3 attempts with backoff (free instances "might restart at any
+#    time"; cold starts can flake). The build is idempotent.
+#  - UTC/DST NOTE: schedule is UTC and does NOT follow DST. 11:00 UTC ≈
+#    07:00 EDT / 06:00 EST — set 2-3h before wake time and re-check after
+#    each DST transition. Actions cron can also slip 15-60 min at popular
+#    times; the healthchecks.io dead-man's switch catches total failures.
+#  - ACTIONS 60-DAY AUTO-DISABLE: GitHub disables scheduled workflows on
+#    repos inactive for 60 days. Mitigation: workflow_dispatch fallback
+#    (run manually) + the keepalive job below commits monthly.
+
+on:
+  schedule:
+    - cron: "0 11 * * *"   # 07:00 EDT / 06:00 EST — adjust + see DST note above
+  workflow_dispatch:        # manual fallback if the schedule auto-disables
+
+jobs:
+  trigger-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Trigger build (hold open until mp3+RSS written)
+        env:
+          API_URL: ${{ secrets.ROUTINECAST_API_URL }}
+          API_TOKEN: ${{ secrets.ROUTINECAST_API_TOKEN }}
+        run: |
+          set -e
+          for attempt in 1 2 3; do
+            echo "build attempt $attempt"
+            # --max-time 840: 14 min ceiling, inside the job's 15-min timeout.
+            if curl -fsS --max-time 840 -X POST \
+              -H "Authorization: Bearer $API_TOKEN" \
+              "$API_URL/api/build"; then
+              echo "build succeeded"
+              exit 0
+            fi
+            echo "attempt $attempt failed; backing off"
+            sleep $((attempt * 30))
+          done
+          echo "all build attempts failed"
+          exit 1
+
+  keepalive:
+    # Trivial job that counts as repo activity; schedule keepalive commits
+    # via a monthly cron if the repo otherwise goes quiet (see header note).
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "keepalive $(date -u +%F)"

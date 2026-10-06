@@ -1,0 +1,30 @@
+# Render blueprint: single free-tier web service (Docker).
+# Spin-down is acceptable: the podcast feed + mp3s are served directly from
+# the public R2 bucket, and builds are triggered by the cron-held request.
+services:
+  - type: web
+    name: routinecast
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/state   # 401 unauthenticated still proves the process is up
+    envVars:
+      - key: API_TOKEN
+        generateValue: true        # copy this into the agent plist + CMS login
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_STATE_BUCKET
+        sync: false
+      - key: R2_FEED_BUCKET
+        sync: false
+      - key: R2_FEED_PUBLIC_BASE_URL
+        sync: false                # e.g. https://pub-xxxxxxxx.r2.dev
+      - key: NTFY_TOPIC
+        sync: false                # unguessable random topic, same bar as feed token
+      - key: HEALTHCHECKS_PING_URL
+        sync: false
+      - key: FEED_TITLE
+        value: Daily Routine

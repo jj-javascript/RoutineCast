@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.routinecast.agent</string>
+
+    <!-- Edit these two paths for your machine (which node / repo path). -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/node</string>
+        <string>__REPO_PATH__/agent/dist/index.js</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>ROUTINECAST_API_URL</key>
+        <string>__API_URL__</string>
+        <key>ROUTINECAST_API_TOKEN</key>
+        <string>__API_TOKEN__</string>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <!-- Opt-in ONLY if YouTube shows the bot wall (D19):
+        <key>YT_DLP_COOKIES_FROM_BROWSER</key>
+        <string>safari</string>
+        -->
+    </dict>
+
+    <!-- Run at load, then hourly. The build cron is scheduled 2-3h before
+         wake; an hourly poll lands well before it (D22 pmset covers sleep). -->
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StartInterval</key>
+    <integer>3600</integer>
+
+    <key>StandardOutPath</key>
+    <string>__HOME__/Library/Logs/routinecast-agent.log</string>
+    <key>StandardErrorPath</key>
+    <string>__HOME__/Library/Logs/routinecast-agent.error.log</string>
+</dict>
+</plist>

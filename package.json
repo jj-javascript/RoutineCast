@@ -1,0 +1,25 @@
+{
+  "name": "routinecast",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Personal daily-routine audio app: CMS + stitch pipeline + Mac fetch agent",
+  "workspaces": [
+    "shared",
+    "app",
+    "agent"
+  ],
+  "scripts": {
+    "build": "npm run build -w shared && npm run build -w app && npm run build -w agent",
+    "test": "npm run build -w @routinecast/shared && vitest run",
+    "typecheck": "npm run typecheck -w @routinecast/shared && npm run typecheck -w @routinecast/app && npm run typecheck -w @routinecast/agent",
+    "dev:app": "npm run dev -w app",
+    "dev:agent": "npm run dev -w agent"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.9"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
